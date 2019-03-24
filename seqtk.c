@@ -206,7 +206,7 @@ static inline void stk_printseq(const kseq_t *s, int line_len)
 	stk_printseq_renamed(s, line_len, 0, -1);
 }
 
-/* 
+/*
    64-bit Mersenne Twister pseudorandom number generator. Adapted from:
 
      http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/VERSIONS/C-LANG/mt19937-64.c
@@ -233,7 +233,7 @@ struct _krand_t {
 static void kr_srand0(krint64_t seed, krand_t *kr)
 {
 	kr->mt[0] = seed;
-	for (kr->mti = 1; kr->mti < KR_NN; ++kr->mti) 
+	for (kr->mti = 1; kr->mti < KR_NN; ++kr->mti)
 		kr->mt[kr->mti] = 6364136223846793005ULL * (kr->mt[kr->mti - 1] ^ (kr->mt[kr->mti - 1] >> 62)) + kr->mti;
 }
 
@@ -331,7 +331,7 @@ int stk_trimfq(int argc, char *argv[])
 			/* max never set; all low qual, just give first min_len bp */
 			if (max == 0.) beg = 0, end = min_len;
 
-			if (end - beg < min_len) { // window-based 
+			if (end - beg < min_len) { // window-based
 				int is, imax;
 				for (i = 0, is = 0; i < min_len; ++i)
 					is += seq->qual.s[i] - 33;
@@ -342,7 +342,7 @@ int stk_trimfq(int argc, char *argv[])
 				end = beg + min_len;
 			}
 		} else beg = 0, end = seq->seq.l;
-		putchar(seq->is_fastq? '@' : '>'); fputs(seq->name.s, stdout); 
+		putchar(seq->is_fastq? '@' : '>'); fputs(seq->name.s, stdout);
 		if (seq->comment.l) {
 			putchar(' '); puts(seq->comment.s);
 		} else putchar('\n');
@@ -1022,6 +1022,55 @@ static void cpy_kseq(kseq_t *dst, const kseq_t *src)
 	cpy_kstr(&dst->comment, &src->comment);
 }
 
+int stk_samplecov(int argc, char *argv[])
+{
+	int l=0,c ;
+	uint64_t genomesize=0;
+	int x=5;
+	gzFile fp;
+	kseq_t *ks;
+	uint32_t line_len=0;
+	if (line_len == 0) line_len = UINT_MAX;
+
+
+	while ((c = getopt(argc, argv, "g:x:")) >= 0)
+			switch (c) {
+				case 'g': genomesize = atol(optarg); break;
+				case 'x': x = atoi(optarg); break;
+				default: return 1;
+			}
+
+	//fprintf(stderr, "%d %d\n",optind + 2,argc);
+	if (optind + 1 > argc) {
+		fprintf(stderr, "\n");
+		fprintf(stderr, "Usage:   seqtk samplecov [-g] [-x cov] <in.fa>\n\n");
+		fprintf(stderr, "Options: -g INT       Genome size\n");
+		fprintf(stderr, "         -x INT       coverage\n\n");
+		return 1;
+	}
+
+	fp = (strcmp(argv[optind], "-") == 0)? gzdopen(fileno(stdin), "r") : gzopen(argv[optind], "r");
+	if (fp == 0) {
+		fprintf(stderr, "[E::%s] failed to open the input file/stream.\n", __func__);
+		return 1;
+	}
+	ks = kseq_init(fp);
+	uint64_t ccov=0;
+	while ((l = kseq_read(ks)) >= 0) {
+			if(ccov < genomesize*x){
+				//print_seq(stdout, ks,0,l);
+				//
+				stk_printseq(ks, line_len);
+			}else{
+				break;
+			}
+			ccov+=l;
+	}
+	kseq_destroy(ks);
+	gzclose(fp);
+	return 0;
+}
+
 int stk_sample(int argc, char *argv[])
 {
 	int c, twopass = 0;
@@ -1128,6 +1177,8 @@ int stk_sample(int argc, char *argv[])
 	free(kr);
 	return 0;
 }
+
+
 
 /* seq */
 
@@ -1532,7 +1583,7 @@ int stk_kfreq(int argc, char *argv[])
 	for (i = 0; i < l; ++i) {
 		int j, x;
 		x = kmer & ~(3 << 2*i);
-		for (j = 0; j < 4; ++j) 
+		for (j = 0; j < 4; ++j)
 			nei[x|j<<2*i] = 1;
 	}
 
@@ -1679,6 +1730,7 @@ static int usage()
 	fprintf(stderr, "Command: seq       common transformation of FASTA/Q\n");
 	fprintf(stderr, "         comp      get the nucleotide composition of FASTA/Q\n");
 	fprintf(stderr, "         sample    subsample sequences\n");
+	fprintf(stderr, "         samplecov    subsample sequences\n");
 	fprintf(stderr, "         subseq    extract subsequences from FASTA/Q\n");
 	fprintf(stderr, "         fqchk     fastq QC (base/quality summary)\n");
 	fprintf(stderr, "         mergepe   interleave two PE FASTA/Q files\n");
@@ -1716,6 +1768,7 @@ int main(int argc, char *argv[])
 	else if (strcmp(argv[1], "trimfq") == 0) return stk_trimfq(argc-1, argv+1);
 	else if (strcmp(argv[1], "hrun") == 0) return stk_hrun(argc-1, argv+1);
 	else if (strcmp(argv[1], "sample") == 0) return stk_sample(argc-1, argv+1);
+	else if (strcmp(argv[1], "samplecov") == 0) return stk_samplecov(argc-1, argv+1);
 	else if (strcmp(argv[1], "seq") == 0) return stk_seq(argc-1, argv+1);
 	else if (strcmp(argv[1], "kfreq") == 0) return stk_kfreq(argc-1, argv+1);
 	else if (strcmp(argv[1], "rename") == 0) return stk_rename(argc-1, argv+1);
