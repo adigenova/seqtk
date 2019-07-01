@@ -1134,6 +1134,65 @@ uint64_t changed=0;
 	return 0;
 }
 
+int stk_minpel(int argc, char *argv[])
+{
+	int l=0,r=0,c,len=60;
+	uint64_t minsize=60;//min size for discovar
+	gzFile fp1;
+	gzFile fp2;
+	kseq_t *kfwd;
+	kseq_t *krev;
+	char* fwdf;
+	char* revf;
+	uint32_t line_len=0;
+	if (line_len == 0) line_len = UINT_MAX;
+
+
+	while ((c = getopt(argc, argv, "f:r:l:")) >= 0)
+			switch (c) {
+				case 'f': fwdf =optarg; break;
+				case 'r': revf = optarg; break;
+				case 'l': len = atoi(optarg); break;
+				default: return 1;
+			}
+
+	//fprintf(stderr, "%d %d\n",optind + 2,argc);
+	if (optind + 1 > argc) {
+		fprintf(stderr, "\n");
+		fprintf(stderr, "Usage:   seqtk minpel -f fwd.fq.gz -r rev.fq.gz prefix\n\n");
+		fprintf(stderr, "Options: -f String       fwd fastq file\n");
+		fprintf(stderr, "         -r String       rev fastq file\n\n");
+		fprintf(stderr, "         -l INT       min length to output seq\n\n");
+		return 1;
+	}
+
+	fp1 = gzopen(fwdf, "r");
+	fp2 = gzopen(revf, "r");
+	if (fp1 == 0 || fp2 == 0) {
+		fprintf(stderr, "[E::%s] failed to open the input file/stream.\n", __func__);
+		return 1;
+	}
+	kfwd = kseq_init(fp1);
+	krev = kseq_init(fp2);
+	//uint64_t ccov=0;
+	while ((l = kseq_read(kfwd)) >= 0 && (r = kseq_read(krev)) >=0) {
+		if(l >=len && r>=len){
+			print_seq(stdout, kfwd,0,l);
+			print_seq(stderr, krev,0,r);
+		}else{
+			//we pass to the next pair
+		}
+	}
+	kseq_destroy(kfwd);
+	kseq_destroy(krev);
+	gzclose(fp1);
+	gzclose(fp2);
+	return 0;
+}
+
+
+
+
 
 int stk_length(int argc, char *argv[])
 {
@@ -1828,7 +1887,7 @@ static int usage()
 	fprintf(stderr, "         comp      get the nucleotide composition of FASTA/Q\n");
 	fprintf(stderr, "         sample    subsample sequences\n");
 	fprintf(stderr, "         samplecov    subsample sequences\n");
-	fprintf(stderr, "         lenght    compute sequences length\n");
+	fprintf(stderr, "         length    compute sequences length\n");
 	fprintf(stderr, "         iupac2bases   ambiguos iupac codes to bases\n");
 	fprintf(stderr, "         subseq    extract subsequences from FASTA/Q\n");
 	fprintf(stderr, "         fqchk     fastq QC (base/quality summary)\n");
@@ -1844,6 +1903,7 @@ static int usage()
 	fprintf(stderr, "         randbase  choose a random base from hets\n");
 	fprintf(stderr, "         cutN      cut sequence at long N\n");
 	fprintf(stderr, "         listhet   extract the position of each het\n");
+	fprintf(stderr, "         minpel   trim read of a pair to a minimum length l\n");
 	fprintf(stderr, "\n");
 	return 1;
 }
@@ -1873,6 +1933,7 @@ int main(int argc, char *argv[])
 	else if (strcmp(argv[1], "seq") == 0) return stk_seq(argc-1, argv+1);
 	else if (strcmp(argv[1], "kfreq") == 0) return stk_kfreq(argc-1, argv+1);
 	else if (strcmp(argv[1], "rename") == 0) return stk_rename(argc-1, argv+1);
+	else if (strcmp(argv[1], "minpel") == 0) return stk_minpel(argc-1, argv+1);
 	else {
 		fprintf(stderr, "[main] unrecognized command '%s'. Abort!\n", argv[1]);
 		return 1;
