@@ -1135,6 +1135,37 @@ uint64_t changed=0;
 }
 
 
+int stk_length(int argc, char *argv[])
+{
+	int l=0;
+	gzFile fp;
+	kseq_t *ks;
+	uint32_t line_len=0;
+	if (line_len == 0) line_len = UINT_MAX;
+
+
+	//fprintf(stderr, "%d %d\n",optind + 2,argc);
+	if (optind + 1 > argc) {
+		fprintf(stderr, "\n");
+		fprintf(stderr, "Usage:   seqtk length <in.fa>\n\n");
+		return 1;
+	}
+
+	fp = (strcmp(argv[optind], "-") == 0)? gzdopen(fileno(stdin), "r") : gzopen(argv[optind], "r");
+	if (fp == 0) {
+		fprintf(stderr, "[E::%s] failed to open the input file/stream.\n", __func__);
+		return 1;
+	}
+	ks = kseq_init(fp);
+	while ((l = kseq_read(ks)) >= 0) {
+				//stk_printseq(ks, line_len);
+				fprintf(stdout,"%s %zu\n",ks->name.s,ks->seq.l);
+	}
+	kseq_destroy(ks);
+	gzclose(fp);
+	return 0;
+}
+
 
 
 int stk_sample(int argc, char *argv[])
@@ -1797,6 +1828,7 @@ static int usage()
 	fprintf(stderr, "         comp      get the nucleotide composition of FASTA/Q\n");
 	fprintf(stderr, "         sample    subsample sequences\n");
 	fprintf(stderr, "         samplecov    subsample sequences\n");
+	fprintf(stderr, "         lenght    compute sequences length\n");
 	fprintf(stderr, "         iupac2bases   ambiguos iupac codes to bases\n");
 	fprintf(stderr, "         subseq    extract subsequences from FASTA/Q\n");
 	fprintf(stderr, "         fqchk     fastq QC (base/quality summary)\n");
@@ -1824,6 +1856,7 @@ int main(int argc, char *argv[])
 	else if (strcmp(argv[1], "hety") == 0) return stk_hety(argc-1, argv+1);
 	else if (strcmp(argv[1], "gc") == 0) return stk_gc(argc-1, argv+1);
 	else if (strcmp(argv[1], "subseq") == 0) return stk_subseq(argc-1, argv+1);
+	else if (strcmp(argv[1], "length") == 0) return stk_length(argc-1, argv+1);
 	else if (strcmp(argv[1], "mutfa") == 0) return stk_mutfa(argc-1, argv+1);
 	else if (strcmp(argv[1], "mergefa") == 0) return stk_mergefa(argc-1, argv+1);
 	else if (strcmp(argv[1], "mergepe") == 0) return stk_mergepe(argc-1, argv+1);
